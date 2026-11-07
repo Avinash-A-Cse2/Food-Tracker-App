@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Food Checker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1f7a4d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Food Checker">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f6f7f4;--card:#fff;--tx:#1d2a22;--mu:#66736b;--bd:#dfe4dd;--ac:#1f7a4d;--g:#1f7a4d;--m:#b7791f;--l:#c05621;--a:#c53030;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a15;--card:#1b261f;--tx:#e8efe9;--mu:#9bab9f;--bd:#2c3a31;--ac:#4cc38a;--g:#4cc38a;--m:#e0a84a;--l:#ec8a50;--a:#f06b6b}}
+:root[data-theme="dark"]{--bg:#121a15;--card:#1b261f;--tx:#e8efe9;--mu:#9bab9f;--bd:#2c3a31;--ac:#4cc38a;--g:#4cc38a;--m:#e0a84a;--l:#ec8a50;--a:#f06b6b}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{color:var(--mu);margin:0 0 16px;font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-top:14px}
+input{width:100%;box-sizing:border-box;padding:12px 14px;font-size:1rem;border:1px solid var(--bd);border-radius:10px;background:var(--card);color:var(--tx)}
+input:focus{outline:2px solid var(--ac)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:999px;padding:6px 12px;font-size:.88rem;cursor:pointer}
+.chip:hover{border-color:var(--ac)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-weight:600;font-size:.85rem;color:#fff}
+.g{background:var(--g)}.m{background:var(--m)}.l{background:var(--l)}.a{background:var(--a)}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0}
+.stat{flex:1;min-width:90px;border:1px solid var(--bd);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:1.1rem}.stat span{color:var(--mu);font-size:.8rem}
+button.add{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-size:.95rem;cursor:pointer}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;background:var(--ac);width:0}
+li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid var(--bd);font-size:.92rem}
+ul{list-style:none;padding:0;margin:8px 0 0}
+li button{background:none;border:0;color:var(--a);cursor:pointer}
+.mu{color:var(--mu);font-size:.85rem}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin:10px 0}
+.tab{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:.85rem}
+.tab.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.meal{padding:8px 0;border-bottom:1px solid var(--bd)}.meal b{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ac)}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:6px 0;font-size:.92rem}.chk input{width:auto;margin-top:5px}
+</style>
+</head>
+<body>
+<main>
+<h1>My Food Checker</h1>
+<div class="card" id="plan"><b>Daily plan</b> <span class="mu" id="pd"></span>
+<div class="tabs" id="tabs"></div><div id="meals"></div>
+<b style="display:block;margin-top:14px">Daily routine</b><div id="rout"></div>
+<p class="mu">Based on your weekly mess menu, with no chicken. Vegetables may change with market availability, so swap in a similar vegetable dish.</p></div>
+<p class="sub">Type a food from the hostel menu. See the portion, calories and whether it helps weight loss. Target: about 2,100 kcal a day.</p>
+<input id="q" type="search" placeholder="Try: idly, parota, rasam, halwa, egg…" autocomplete="off">
+<div class="chips" id="sug"></div>
+<div class="card" id="res" hidden></div>
+<div class="card">
+<b>Today’s plate</b> <span class="mu">(calories of the portions you add)</span>
+<div class="bar"><i id="fill"></i></div>
+<div id="tot" class="mu"></div>
+<ul id="list"></ul>
+</div>
+<p class="mu">General guidance with approximate values, not medical advice.</p>
+</main>
+<script>
+const T=2100;
+const D=`Idly (3)|180|3 idlys with sambar|6|g|Steamed and low in oil. Best breakfast.
+Dosa (2)|260|2 plain dosas, plenty of sambar|6|g|Skip extra oil and ghee.
+Onion dosa (1)|170|1 dosa|4|m|Fine with sambar, avoid extra chutney.
+Podi idly (3)|230|2 to 3 pieces|6|m|Podi has oil, so go light.
+Uthappam (1)|200|1 uthappam|5|m|Add sambar to fill up.
+Pongal|250|Small cup (3/4 cup)|6|m|Ghee heavy, so keep it small.
+Puttu with kadala curry|280|1 piece with curry|9|g|Good protein from the chickpeas.
+Poori (2)|280|Max 2 pieces|5|l|Deep fried. Use potato masala sparingly.
+Semiya kitchadi|250|3/4 cup|5|m|Add sambar, not extra chutney.
+Rava kitchadi|250|3/4 cup|5|m|Refined carbs, small portion.
+Lemon sevai|250|3/4 cup|5|m|Small portion.
+Bread jam (1)|120|1 slice|2|l|Mostly sugar. Pair with 2 eggs.
+Boiled egg (2)|140|2 eggs|12|g|Best protein you get. Take it every time.
+Veg salna|100|1/2 cup|3|g|Good with idly or dosa.
+Sambar|90|1 cup|4|g|Take freely, protein and fibre.
+Coconut chutney|50|2 tablespoons|1|m|Tasty but calorie dense.
+Coffee with sugar|80|1 cup|2|m|Ask for less sugar.
+Tea|70|1 cup|2|m|Ask for less sugar.
+Ginger tea|30|1 cup, no sugar|0|g|Great swap for sweet tea.
+White rice|200|1 to 1.5 cups cooked|4|m|Main calorie source, cut it to half your usual.
+Tamarind rice|280|3/4 cup|5|l|Oily. Eat with raitha.
+Coconut rice|300|3/4 cup|5|l|Oil and coconut. Small portion.
+Vegetable briyani|300|3/4 cup with raitha|6|l|Heavy on oil. Skip fried sides.
+Chowli masala|120|1/2 cup|7|g|Good protein.
+Chapathi (2)|200|2 chapathis|6|g|Better than rice. Skip extra oil.
+Curd rice|250|3/4 cup|6|m|Okay if rice portion is small.
+Ghee rice|330|1/2 cup|5|l|Rich in ghee. Keep very small.
+Veg pulao|270|3/4 cup|5|l|Take less rice, more kurma.
+Peas pulao|270|3/4 cup|6|l|Take less rice, more kurma.
+Jeera pulao|270|3/4 cup|5|l|Take less rice.
+Sambar rice|250|3/4 cup|6|m|Okay with a vegetable side.
+Rasam|40|1 cup or more|1|g|Light and filling. Eat freely.
+Buttermilk|40|1 to 2 glasses|2|g|Great. Eat freely.
+Appalam (1)|50|Skip or 1 piece|1|l|Fried. Skip if you can.
+Fryums|80|Skip or 4 to 5 pieces|1|l|Fried, empty calories.
+Pickle|15|1 teaspoon|0|l|High salt and oil.
+Thoran|90|1/2 to 1 cup|3|g|Vegetables. Fill the plate with this.
+Poriyal|90|1/2 to 1 cup|3|g|Take extra, good fibre.
+Kootu|100|1/2 to 1 cup|5|g|Dal and vegetables. Good.
+Dal fry|130|1/2 cup|7|g|Good protein.
+Raitha|60|1/2 cup|3|g|Cooling, good with briyani.
+Brinjal kozhambu|100|1/2 cup|2|g|Fine, watch the oil on top.
+Pumpkin more kozhambu|100|1/2 cup|3|g|Fine.
+Vathal kozhambu|100|1/2 cup|2|m|Oily and salty, small portion.
+Paruppu thovayal|80|2 tablespoons|4|m|Good flavour, use little.
+Rawa banana varuval|130|2 to 3 pieces|1|l|Fried.
+Paruppu payasam|200|Skip|4|a|Sugar and ghee. Skip while cutting.
+Bombay halwa|200|Skip, or a taste|2|a|Sugar and ghee.
+Semiya kesari|250|Skip, or a few spoons|3|a|Sugar and ghee.
+Sweet pongal|250|Skip, or a few spoons|4|a|Sugar and ghee.
+Cream bun|300|Skip|4|a|Refined flour, sugar and cream.
+Fruit cake|200|Skip, or 1 small slice|3|a|Sugar and refined flour.
+Pineapple pudding|180|Skip, or a few spoons|3|l|Sugar. Rare treat only.
+Badusha|250|Skip|2|a|Deep fried in sugar syrup.
+Mysore bonda|120|Skip, or 1 piece|3|l|Deep fried.
+Aloo bonda|130|Skip, or 1 piece|3|l|Deep fried.
+Medhu vada|130|Skip, or 1 piece|5|l|Deep fried.
+Keerai vada|130|Skip, or 1 piece|5|l|Deep fried, though it has greens.
+Masala vadai|120|Skip, or 1 piece|5|l|Deep fried.
+Sundal|130|1/2 to 1 cup|7|g|Best snack on the menu. Take it.
+Parota (4)|1000|Max 1 piece, never 4|10|a|Refined flour and oil. 4 pieces is a full day of fat.
+Parota (1)|250|1 piece at most|3|l|Choose chapathi instead.
+Veg kurma|130|1/2 cup|4|m|Coconut based, so go light.
+Peas masala|130|1/2 cup|6|g|Good protein.
+Potato masala|150|1/2 cup|3|l|Starchy. Eat less with rice or poori.
+Veg pasta|250|Small serving (about 100 g)|6|l|Refined carbs. Add banana or milk.
+Banana (1)|90|1 banana|1|g|Good dinner finisher.
+Hot milk|120|1 glass|6|g|Good protein and calcium.
+Badam milk|150|1 glass|6|m|Has sugar.
+Jal jeera|30|1 glass|0|g|Light and refreshing.
+Curd|100|1 small bowl|5|g|Good, take it with lunch.
+Sprouts|100|1 cup|7|g|Great snack.
+Apple|80|1 apple|0|g|Good snack.
+Samosa|260|Skip|4|a|Fried.
+Cold drink|150|Skip|0|a|Pure sugar.
+Chips|150|Skip|2|a|Fried and salty.
+Ice cream|200|Skip, or a small scoop|3|a|Sugar and fat.`.trim().split('\n').map(r=>{const[n,k,s,p,v,t]=r.split('|');return{n,k:+k,s,p:+p,v,t}});
+const V={g:['Good for weight loss','Eat it within the portion shown.'],m:['Okay in moderation','Keep to the portion and balance the rest of the day.'],l:['Limit it','Have it rarely or in a very small portion.'],a:['Avoid while cutting','Skip it most days. Save it for a rare treat.']};
+const q=document.getElementById('q'),sug=document.getElementById('sug'),res=document.getElementById('res');
+let cur=null,plate=[];
+function find(t){t=t.trim().toLowerCase();return t?D.filter(f=>f.n.toLowerCase().includes(t)):[]}
+function show(f){cur=f;res.hidden=false;res.innerHTML=`<b style="font-size:1.15rem">${f.n}</b> <span class="badge ${f.v}">${V[f.v][0]}</span><div class="row"><div class="stat"><b>${f.k} kcal</b><span>per portion</span></div><div class="stat"><b>${f.p} g</b><span>protein</span></div></div><p style="margin:6px 0"><b>Portion:</b> ${f.s}</p><p style="margin:6px 0">${f.t} ${V[f.v][1]}</p><button class="add" id="add">Add to today</button>`;document.getElementById('add').onclick=()=>{plate.push(f);draw()}}
+function draw(){const sum=plate.reduce((a,f)=>a+f.k,0);document.getElementById('fill').style.width=Math.min(100,sum/T*100)+'%';document.getElementById('tot').textContent=sum+' of '+T+' kcal'+(sum>T?' (over target)':'');const ul=document.getElementById('list');ul.innerHTML='';plate.forEach((f,i)=>{const li=document.createElement('li');li.innerHTML=`<span>${f.n} <span class="mu">${f.k} kcal</span></span><button aria-label="Remove">✕</button>`;li.querySelector('button').onclick=()=>{plate.splice(i,1);draw()};ul.appendChild(li)})}
+function chips(list){sug.innerHTML='';list.slice(0,8).forEach(f=>{const b=document.createElement('button');b.className='chip';b.textContent=f.n;b.onclick=()=>{q.value=f.n;show(f)};sug.appendChild(b)})}
+q.addEventListener('input',()=>{const r=find(q.value);chips(r);if(!q.value.trim()){res.hidden=true;return}if(r.length){show(r[0])}else{cur=null;res.hidden=false;res.innerHTML=guess(q.value)}});
+q.addEventListener('keydown',e=>{if(e.key==='Enter'&&cur)document.getElementById('add').click()});
+chips(['Idly (3)','Boiled egg (2)','Sundal','Rasam','White rice','Parota (1)','Bombay halwa','Chapathi (2)'].map(n=>D.find(f=>f.n===n)));
+const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const P=[['3 idlys with veg salna and mint chutney, black coffee','1 cup rice, brinjal masala, raitha, 1 boiled egg, jal jeera. Rice is the only carb, skip chicken briyani','Mixed sundal and tea without sugar. Skip badusha','3 chappathis with peas masala, 1 banana, hot milk. Skip jeera pulao and rice'],['2 boiled eggs, 1 poori with a little potato masala, black coffee. Skip kitchadi','1 cup rice or 3/4 cup tamarind rice, kadhamba sambar, rasam, buttermilk. Skip appalam','Tea without sugar. Skip halwa and keerai vada','1 to 2 uthappams with lots of sambar, 1 banana, hot milk'],['Small pongal with sambar and 1 medhu vada at most, black coffee','1 cup rice, cabbage thoran, keerai kootu, rasam, buttermilk. Skip fryums','Beach sundal and ginger tea. Skip semiya kesari','1 parota only (no ghee rice) with rasam, buttermilk, 1 hot milk. Lunch is your main meal today'],['2 boiled eggs, small semiya kitchadi with sambar, black coffee','1 cup white rice, raddish sambar, beetroot poriyal, rasam, buttermilk. Skip coconut rice and appalam','Tea only. Skip aloo bonda and sweet pongal','3 chappathis with veg kurma, 1 banana, badam milk. Skip peas pulao and rice'],['Small pongal with tiffin sambar, 1 medhu vada at most. Skip kitchadi','1 cup rice, dal fry, pumpkin more kozhambu, rasam, buttermilk. Skip banana varuval and fryums','Black channa sundal and ginger tea. Skip cream bun','4 idlys with kara chutney, buttermilk, hot milk. Protein is low today, so eat dal at lunch'],['2 boiled eggs, puttu with kadala curry, 1 dosa, black coffee','3/4 cup veg briyani with lots of raitha, small curd rice. Skip appalam and payasam','Tea only. Skip mysore bonda and fruit cake','Small sambar rice with potato poriyal, 1 banana, hot milk'],['1 boiled egg, 3 idlys with sambar. Skip bread jam and masala vadai','2 chapathis with chowli masala, chow chow kootu, rasam, buttermilk. Skip fryums','Ginger tea. Skip medhu vada and pineapple pudding','2 dosas with sambar, 1 banana, hot milk. Skip veg pasta, or take a few spoons']];
+const W=['a long easy walk or a sport, 45 to 60 min','strength: push-ups, squats, rows or gym, 40 min','brisk walk or jog, 40 min','strength: push-ups, squats, plank, 40 min','brisk walk or jog, 40 min','strength: push-ups, lunges, plank, 40 min','brisk walk or jog, 40 min'];
+let dy=new Date().getDay();
+function renderPlan(){document.getElementById('pd').textContent=DN[dy]+(dy===new Date().getDay()?' (today)':'');const tb=document.getElementById('tabs');tb.innerHTML='';DN.forEach((n,i)=>{const b=document.createElement('button');b.className='tab'+(i===dy?' on':'');b.textContent=n.slice(0,3);b.onclick=()=>{dy=i;renderPlan()};tb.appendChild(b)});const L=['Breakfast','Lunch','Snacks','Dinner'];document.getElementById('meals').innerHTML=P[dy].map((t,i)=>`<div class="meal"><b>${L[i]}</b>${t}</div>`).join('');const items=['Wake up and drink 500 ml water','Morning: '+W[dy],'8,000 to 10,000 steps through the day','Water: 3 to 4 litres, finish by 9 pm','Stick to the plan above, no extra sugar in tea or coffee','Dinner by 8:30 pm, then a 15-minute walk','Sleep by 11 pm for 7 to 8 hours'];const key='chk-'+dy;let s={};try{s=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}const r=document.getElementById('rout');r.innerHTML='';items.forEach((t,i)=>{const l=document.createElement('label');l.className='chk';l.innerHTML=`<input type="checkbox" ${s[i]?'checked':''}><span>${t}</span>`;l.querySelector('input').onchange=e=>{s[i]=e.target.checked;try{localStorage.setItem(key,JSON.stringify(s))}catch(x){}};r.appendChild(l)})}
+function guess(t){t=t.toLowerCase();let v='m',w='Not in my list, so this is a rule-of-thumb guess.';if(/fry|fried|vada|bonda|pakora|puri|poori|samosa|chips|burger|pizza|fries|parotta|parota|biryani|briyani/.test(t)){v='l';w='Fried, oily or refined-flour foods are high in calories. Keep it small and rare.'}else if(/sweet|halwa|cake|ice|cream|chocolate|cola|soda|juice|sugar|payasam|kesari|laddu|jilebi|jalebi|gulab|pudding|biscuit|cookie/.test(t)){v='a';w='Sugary foods add calories without keeping you full. Avoid most days.'}else if(/boil|steam|grill|salad|sprout|dal|egg|fruit|apple|banana|curd|milk|idly|idli|dosa|sundal|soup|rasam|sambar|veg|paneer|oats|nuts/.test(t)){v='g';w='Light, protein-rich or fibre-rich foods are good. Keep the portion sensible.'}return `<b>${t.replace(/</g,'')}</b> <span class="badge ${v}">${V[v][0]}</span><p>${w} ${V[v][1]}</p><p class="mu">Not in my list, so I can’t give exact calories. Compare it with a similar food in the list.</p>`}
+renderPlan();
+draw();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+</script>
+</body>
+</html>
